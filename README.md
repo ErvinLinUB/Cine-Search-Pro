@@ -10,8 +10,6 @@
     - **Req 3: Fragment Pattern** - `<template>` cloned into a `DocumentFragment`, only ONE `appendChild` to the real DOM at the end.
     - **Req 4: Result Caching** - `Map` stores results by query, cache is checked before every fetch so repeated searches produce zero network requests.
     - **Req 5: State-Based CSS** - `data-loading` attribute toggled by JS only, CSS will handle the visual.
-    
-<br>
 
 - **Requirements yet to be fillfilled:**
     - **Req 2: Promise.allSettled** - movie detail panel not built yet, no concurrent fetching of Details, Credits, and Videos.
