@@ -5,12 +5,16 @@ class SearchComponent {
     // DOM Refs
     this.searchInput = document.getElementById('search-input');
     if (!this.searchInput) throw new Error('Element #search-input not found in the DOM');
+
     this.resultsList = document.getElementById('results-list');
     if (!this.resultsList) throw new Error('Element #results-list not found in the DOM');
+
     this.statusEl = document.getElementById('status');
     if (!this.statusEl) throw new Error('Element #status not found in the DOM');
+
     this.app = document.getElementById('app');
     if (!this.app) throw new Error('Element #app not found in the DOM');
+    
     this.movieTemplate = document.getElementById('movie-template');
     if (!this.movieTemplate) throw new Error('Element #movie-template not found in the DOM');
 
