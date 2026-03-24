@@ -1,16 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineSearch Pro</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineSearch Pro</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+
   <div id="app" data-loading="false">
-    <input type="text" id="search-input" placeholder="Search movies..." />
-    <p id="status"></p>
-    <ul id="results-list"></ul>
+
+    <h1>CineSearch Pro</h1>
+
+    <div class="main-layout">
+
+      <div class="search-column">
+        <input type="text" id="search-input" placeholder="Search movies..." />
+        <p id="status"></p>
+        <div class="spinner" id="spinner"></div>
+        <ul id="results-list"></ul>
+      </div>
+
+      <div class="detail-column">
+        <div id="detail-panel">
+          <h2 id="detail-title"></h2>
+          <p id="detail-overview"></p>
+          <p><strong>Genres:</strong> <span id="detail-genres"></span></p>
+          <p><strong>Cast:</strong> <span id="detail-cast"></span></p>
+          <p><strong>Trailer:</strong> <span id="detail-videos"></span></p>
+        </div>
+      </div>
+
+    </div>
+
   </div>
 
   <template id="movie-template">

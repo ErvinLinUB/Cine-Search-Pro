@@ -1,129 +1,262 @@
-class SearchComponent {
+// Dom References
+const searchInput = document.getElementById('search-input');
+if (!searchInput) throw new Error('Element #search-input not found in the DOM');
 
-  constructor() {
+const resultsList = document.getElementById('results-list');
+if (!resultsList) throw new Error('Element #results-list not found in the DOM');
 
-    // DOM Refs
-    this.searchInput = document.getElementById('search-input');
-    if (!this.searchInput) throw new Error('Element #search-input not found in the DOM');
+const statusEl = document.getElementById('status');
+if (!statusEl) throw new Error('Element #status not found in the DOM');
 
-    this.resultsList = document.getElementById('results-list');
-    if (!this.resultsList) throw new Error('Element #results-list not found in the DOM');
+const app = document.getElementById('app');
+if (!app) throw new Error('Element #app not found in the DOM');
 
-    this.statusEl = document.getElementById('status');
-    if (!this.statusEl) throw new Error('Element #status not found in the DOM');
+const movieTemplate = document.getElementById('movie-template');
+if (!movieTemplate) throw new Error('Element #movie-template not found in the DOM');
 
-    this.app = document.getElementById('app');
-    if (!this.app) throw new Error('Element #app not found in the DOM');
-    
-    this.movieTemplate = document.getElementById('movie-template');
-    if (!this.movieTemplate) throw new Error('Element #movie-template not found in the DOM');
+const detailPanel = document.getElementById('detail-panel');
+if (!detailPanel) throw new Error('Element #detail-panel not found in the DOM');
 
-    // Config
-    this.API_KEY  = '2ee7d6898391a99306f00fe36468ece7';
-    this.API_BASE = 'https://api.themoviedb.org/3/search/movie';
+const detailTitle = document.getElementById('detail-title');
+if (!detailTitle) throw new Error('Element #detail-title not found in the DOM');
 
-    // State
-    this.cache        = new Map();
-    this.timerId      = null;
-    this.currentAbort = null;
+const detailOverview = document.getElementById('detail-overview');
+if (!detailOverview) throw new Error('Element #detail-overview not found in the DOM');
 
-    this.init();
-  }
+const detailGenres = document.getElementById('detail-genres');
+if (!detailGenres) throw new Error('Element #detail-genres not found in the DOM');
 
-  // Init
-  init() {
-    this.searchInput.addEventListener('input', (e) => this.handleInput(e));
-  }
+const detailCast = document.getElementById('detail-cast');
+if (!detailCast) throw new Error('Element #detail-cast not found in the DOM');
 
-  // Set Loading
-  setLoading(isLoading) {
-    this.app.setAttribute('data-loading', isLoading);
-  }
+const detailVideos = document.getElementById('detail-videos');
+if (!detailVideos) throw new Error('Element #detail-videos not found in the DOM');
 
-  // Render Results
-  renderResults(movies) {
-    this.resultsList.innerHTML = '';
+// Configuration
+const API_KEY  = '2ee7d6898391a99306f00fe36468ece7';
+const API_BASE = 'https://api.themoviedb.org/3';
 
-    if (movies.length === 0) {
-      this.statusEl.textContent = 'No results found.';
-      return;
-    }
+// Application State
+const cache      = new Map();
+let timerId      = null;
+let currentAbort = null;
+let activeIndex  = -1;
 
-    this.statusEl.textContent = '';
-
-    const frag = new DocumentFragment();
-
-    movies.forEach(movie => {
-      const clone = this.movieTemplate.content.cloneNode(true);
-      clone.querySelector('.title').textContent = movie.title;
-      frag.appendChild(clone);
-    });
-
-    this.resultsList.appendChild(frag);
-  }
-
-  // Fetch Results
-  fetchResults(query) {
-    if (this.cache.has(query)) {
-      console.log('Cache hit:', query);
-      this.renderResults(this.cache.get(query));
-      return;
-    }
-
-    if (this.currentAbort) {
-      this.currentAbort.abort();
-    }
-    this.currentAbort = new AbortController();
-
-    this.setLoading(true);
-    this.statusEl.textContent = '';
-
-    const url = `${this.API_BASE}?api_key=${this.API_KEY}&query=${encodeURIComponent(query)}`;
-
-    fetch(url, { signal: this.currentAbort.signal })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('HTTP error - status: ' + response.status);
-        }
-        return response.json();
-      })
-      .then(data => {
-        const results = data.results || [];
-        this.cache.set(query, results);
-        this.renderResults(results);
-      })
-      .catch(err => {
-        if (err.name === 'AbortError') {
-          console.log('Request cancelled:', query);
-          return;
-        }
-        this.statusEl.textContent = 'Error: ' + err.message;
-      })
-      .finally(() => {
-        this.setLoading(false);
-      });
-  }
-
-  // Handle Input
-  handleInput(e) {
-    const query = e.target.value.trim();
-
-    if (!query) {
-      this.resultsList.innerHTML = '';
-      this.statusEl.textContent  = '';
-      return;
-    }
-
-    if (this.timerId) {
-      clearTimeout(this.timerId);
-    }
-
-    this.timerId = setTimeout(() => {
-      this.fetchResults(query);
-    }, 300);
-  }
-
+// Ui State
+function setLoading(isLoading) {
+  app.setAttribute('data-loading', isLoading);
 }
 
-// Initialise
-const search = new SearchComponent();
+// Highlighting
+function buildHighlightedTitle(title, query) {
+  const container = document.createElement('span');
+  const idx = title.toLowerCase().indexOf(query.toLowerCase());
+
+  if (idx === -1) {
+    container.textContent = title;
+    return container;
+  }
+
+  const before = document.createTextNode(title.slice(0, idx));
+  const match  = document.createElement('span');
+  const after  = document.createTextNode(title.slice(idx + query.length));
+
+  match.className   = 'highlight';
+  match.textContent = title.slice(idx, idx + query.length);
+
+  container.appendChild(before);
+  container.appendChild(match);
+  container.appendChild(after);
+
+  return container;
+}
+
+// Render Results
+function renderResults(movies, query) {
+  resultsList.innerHTML = '';
+  activeIndex = -1;
+
+  if (movies.length === 0) {
+    statusEl.textContent = 'No results found.';
+    return;
+  }
+
+  statusEl.textContent = '';
+
+  const frag = new DocumentFragment();
+
+  movies.forEach((movie, index) => {
+    const clone = movieTemplate.content.cloneNode(true);
+    const li    = clone.querySelector('li');
+    const span  = clone.querySelector('.title');
+
+    span.appendChild(buildHighlightedTitle(movie.title, query));
+
+    li.setAttribute('data-index', index);
+    li.addEventListener('click', () => selectMovie(movie.id));
+
+    frag.appendChild(clone);
+  });
+
+  resultsList.appendChild(frag);
+}
+
+// Keyboard Navigation
+function updateActiveItem() {
+  const items = resultsList.querySelectorAll('li');
+  items.forEach((item, i) => {
+    item.classList.toggle('active', i === activeIndex);
+  });
+}
+
+// Movie Details
+function selectMovie(movieId) {
+  detailPanel.style.display = 'block';
+  detailTitle.textContent   = 'Loading...';
+  detailOverview.textContent = '';
+  detailGenres.textContent   = '';
+  detailCast.textContent     = '';
+  detailVideos.innerHTML     = '';
+
+  const detailsUrl = `${API_BASE}/movie/${movieId}?api_key=${API_KEY}`;
+  const creditsUrl = `${API_BASE}/movie/${movieId}/credits?api_key=${API_KEY}`;
+  const videosUrl  = `${API_BASE}/movie/${movieId}/videos?api_key=${API_KEY}`;
+
+  Promise.allSettled([
+    fetch(detailsUrl).then(r => r.json()),
+    fetch(creditsUrl).then(r => r.json()),
+    fetch(videosUrl).then(r => r.json())
+  ]).then(([detailsResult, creditsResult, videosResult]) => {
+
+    if (detailsResult.status === 'fulfilled') {
+      const d = detailsResult.value;
+      detailTitle.textContent    = d.title || 'N/A';
+      detailOverview.textContent = d.overview || 'No overview available.';
+      detailGenres.textContent   = d.genres
+        ? d.genres.map(g => g.name).join(', ')
+        : 'N/A';
+    } else {
+      detailTitle.textContent = 'Failed to load details.';
+    }
+
+    if (creditsResult.status === 'fulfilled') {
+      const cast = creditsResult.value.cast || [];
+      detailCast.textContent = cast.length
+        ? cast.slice(0, 5).map(c => c.name).join(', ')
+        : 'No cast available.';
+    } else {
+      detailCast.textContent = 'Failed to load credits.';
+    }
+
+    if (videosResult.status === 'fulfilled') {
+      const videos = videosResult.value.results || [];
+      const trailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+
+      if (trailer) {
+        const a = document.createElement('a');
+        a.href        = `https://www.youtube.com/watch?v=${trailer.key}`;
+        a.target      = '_blank';
+        a.textContent = 'Watch Trailer';
+        detailVideos.appendChild(a);
+      } else {
+        detailVideos.textContent = 'No trailer available.';
+      }
+    } else {
+      detailVideos.textContent = 'Failed to load videos.';
+    }
+  });
+}
+
+// Search Requests
+function fetchResults(query) {
+  if (cache.has(query)) {
+    console.log('Cache hit:', query);
+    renderResults(cache.get(query), query);
+    return;
+  }
+
+  if (currentAbort) {
+    currentAbort.abort();
+  }
+
+  currentAbort = new AbortController();
+
+  setLoading(true);
+  statusEl.textContent = '';
+
+  const url = `${API_BASE}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`;
+
+  fetch(url, { signal: currentAbort.signal })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('HTTP error - status: ' + response.status);
+      }
+      return response.json();
+    })
+    .then(data => {
+      const results = data.results || [];
+      cache.set(query, results);
+      renderResults(results, query);
+    })
+    .catch(err => {
+      if (err.name === 'AbortError') {
+        console.log('Request cancelled:', query);
+        return;
+      }
+      statusEl.textContent = 'Error: ' + err.message;
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}
+
+// Input Handling
+function handleInput(e) {
+  const query = e.target.value.trim();
+
+  if (!query) {
+    resultsList.innerHTML  = '';
+    statusEl.textContent   = '';
+    detailPanel.style.display = 'none';
+    return;
+  }
+
+  if (timerId) {
+    clearTimeout(timerId);
+  }
+
+  timerId = setTimeout(() => {
+    fetchResults(query);
+  }, 300);
+}
+
+// Keyboard Input
+function handleKeydown(e) {
+  const items = resultsList.querySelectorAll('li');
+  if (!items.length) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeIndex = Math.min(activeIndex + 1, items.length - 1);
+    updateActiveItem();
+  } 
+  else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeIndex = Math.max(activeIndex - 1, 0);
+    updateActiveItem();
+  } 
+  else if (e.key === 'Enter' && activeIndex >= 0) {
+    const activeItem = items[activeIndex];
+    const index      = parseInt(activeItem.getAttribute('data-index'));
+    const query      = searchInput.value.trim();
+    const movies     = cache.get(query) || [];
+
+    if (movies[index]) {
+      selectMovie(movies[index].id);
+    }
+  }
+}
+
+// Initialization
+searchInput.addEventListener('input', handleInput);
+searchInput.addEventListener('keydown', handleKeydown);
