@@ -45,7 +45,7 @@ body {
   color: var(--ctp-text);
   line-height: 1.6;
   height: 100vh;
-  overflow: hidden; /* Prevents page scrolling - ONLY panels scroll */
+  overflow: hidden;
 }
 
 /* ── App Container ──────────────────────────── */
@@ -81,16 +81,16 @@ h1 {
   margin-top: 0.25rem;
 }
 
-/* ── Main Layout (Takes remaining height) ───── */
+/* ── Main Layout ────────────────────────────── */
 .main-layout {
   display: flex;
   gap: 2rem;
   flex: 1;
-  min-height: 0; /* Important for flex children to respect height constraints */
+  min-height: 0;
   overflow: hidden;
 }
 
-/* ── Search Column (Fixed header + Scrollable list) ── */
+/* ── Search Column ──────────────────────────── */
 .search-column {
   flex: 1;
   min-width: 280px;
@@ -101,7 +101,6 @@ h1 {
   overflow: hidden;
 }
 
-/* Fixed search controls */
 .search-controls {
   flex-shrink: 0;
   margin-bottom: 1rem;
@@ -158,7 +157,7 @@ h1 {
   to { transform: rotate(360deg); }
 }
 
-/* ── Results List Wrapper (Scrollable) ──────── */
+/* ── Results List Wrapper ───────────────────── */
 .results-wrapper {
   flex: 1;
   overflow-y: auto;
@@ -167,7 +166,6 @@ h1 {
   border-radius: var(--radius-lg);
 }
 
-/* Custom scrollbar */
 .results-wrapper::-webkit-scrollbar {
   width: 6px;
 }
@@ -195,7 +193,6 @@ h1 {
   overflow: hidden;
 }
 
-/* Hide results-list border when empty */
 #results-list:empty {
   border: none;
 }
@@ -219,7 +216,6 @@ h1 {
   transform: translateX(2px);
 }
 
-/* Active State for Keyboard Navigation */
 #results-list li.active {
   background: var(--ctp-surface1);
   border-left: 3px solid var(--ctp-lavender);
@@ -252,7 +248,7 @@ h1 {
   padding: 0 2px;
 }
 
-/* ── Detail Column (Scrollable) ─────────────── */
+/* ── Detail Column ──────────────────────────── */
 .detail-column {
   flex: 1.4;
   min-width: 0;
@@ -261,7 +257,6 @@ h1 {
   overflow-x: hidden;
 }
 
-/* Custom scrollbar */
 .detail-column::-webkit-scrollbar {
   width: 6px;
 }
@@ -296,7 +291,7 @@ h1 {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(203, 166, 247, 0.08);
 }
 
-/* Hero Section with Backdrop */
+/* Hero Section */
 .hero-section {
   position: relative;
   min-height: 300px;
@@ -363,6 +358,18 @@ h1 {
   color: var(--ctp-text);
   margin-bottom: 0.5rem;
   letter-spacing: -0.02em;
+}
+
+/* Rating Styles */
+.movie-rating {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--ctp-yellow);
 }
 
 .movie-meta {

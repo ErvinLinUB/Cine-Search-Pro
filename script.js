@@ -23,6 +23,9 @@ if (!detailPoster) throw new Error('Element #detail-poster not found in the DOM'
 const detailTitle = document.getElementById('detail-title');
 if (!detailTitle) throw new Error('Element #detail-title not found in the DOM');
 
+const detailRating = document.getElementById('detail-rating');
+if (!detailRating) throw new Error('Element #detail-rating not found in the DOM');
+
 const detailOverview = document.getElementById('detail-overview');
 if (!detailOverview) throw new Error('Element #detail-overview not found in the DOM');
 
@@ -44,17 +47,17 @@ const IMG_BASE_W92  = 'https://image.tmdb.org/t/p/w92';
 const IMG_BASE_W500 = 'https://image.tmdb.org/t/p/w500';
 
 // APPLICATION STATE
-const cache      = new Map();      // Stores search results
-let timerId      = null;           // Debounce timer
-let currentAbort = null;           // AbortController for cancelling requests
-let activeIndex  = -1;             // Keyboard navigation index
+const cache      = new Map();
+let timerId      = null;
+let currentAbort = null;
+let activeIndex  = -1;
 
 // UI STATE
 function setLoading(isLoading) {
   app.setAttribute('data-loading', isLoading);
 }
 
-// HIGHLIGHTING (XSS prevention using textContent)
+// HIGHLIGHTING
 function buildHighlightedTitle(title, query) {
   const container = document.createElement('span');
   const idx = title.toLowerCase().indexOf(query.toLowerCase());
@@ -78,7 +81,7 @@ function buildHighlightedTitle(title, query) {
   return container;
 }
 
-// RENDER RESULTS (uses Fragment Pattern for performance)
+// RENDER RESULTS
 function renderResults(movies, query) {
   resultsList.innerHTML = '';
   activeIndex = -1;
@@ -116,7 +119,7 @@ function renderResults(movies, query) {
   resultsList.appendChild(frag);
 }
 
-// KEYBOARD NAVIGATION. This function highlights the currently selected movie in the results list when using keyboard arrows (Up/Down).
+// KEYBOARD NAVIGATION
 function updateActiveItem() {
   const items = resultsList.querySelectorAll('li');
   items.forEach((item, i) => {
@@ -124,10 +127,11 @@ function updateActiveItem() {
   });
 }
 
-// FETCH MOVIE DETAILS (gets details, credits, and videos from TMDB API)
+// FETCH MOVIE DETAILS
 function selectMovie(movieId) {
   detailPanel.style.display = 'block';
   detailTitle.textContent    = 'Loading...';
+  detailRating.textContent   = '';
   detailOverview.textContent = '';
   detailGenres.textContent   = '';
   detailCast.textContent     = '';
@@ -138,7 +142,6 @@ function selectMovie(movieId) {
   const creditsUrl = `${API_BASE}/movie/${movieId}/credits?api_key=${API_KEY}`;
   const videosUrl  = `${API_BASE}/movie/${movieId}/videos?api_key=${API_KEY}`;
 
-  // Promise.allSettled ensures all requests finish (won't fail if one fails)
   Promise.allSettled([
     fetch(detailsUrl).then(r => r.json()),
     fetch(creditsUrl).then(r => r.json()),
@@ -154,6 +157,15 @@ function selectMovie(movieId) {
         ? d.genres.map(g => g.name).join(', ')
         : 'N/A';
 
+      // Display rating
+      if (d.vote_average) {
+        const rating = d.vote_average.toFixed(1);
+        const voteCount = d.vote_count || 0;
+        detailRating.innerHTML = `⭐ ${rating}/10 (${voteCount} votes)`;
+      } else {
+        detailRating.textContent = 'No rating available.';
+      }
+
       if (d.poster_path) {
         detailPoster.src    = IMG_BASE_W500 + d.poster_path;
         detailPoster.alt    = d.title;
@@ -163,6 +175,7 @@ function selectMovie(movieId) {
       }
     } else {
       detailTitle.textContent = 'Failed to load details.';
+      detailRating.textContent = '';
     }
 
     if (creditsResult.status === 'fulfilled') {
@@ -194,16 +207,14 @@ function selectMovie(movieId) {
   });
 }
 
-// SEARCH REQUESTS (with debounce, cache, and AbortController)
+// SEARCH REQUESTS
 function fetchResults(query) {
-  // Cache check
   if (cache.has(query)) {
     console.log('Cache hit:', query);
     renderResults(cache.get(query), query);
     return;
   }
 
-  // Abort previous request
   if (currentAbort) {
     currentAbort.abort();
   }
@@ -214,26 +225,19 @@ function fetchResults(query) {
   statusEl.textContent = '';
 
   const url = `${API_BASE}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`;
-  // encodeURIComponent converts special characters into URL-safe characters
 
-  fetch(url, { signal: currentAbort.signal }) 
-
-    // Runs if promise succeeds.
+  fetch(url, { signal: currentAbort.signal })
     .then(response => {
       if (!response.ok) {
         throw new Error('HTTP error - status: ' + response.status);
       }
       return response.json();
     })
-
-    // Runs if promise succeeds.
     .then(data => {
-      const results = data.results || []; // Extracts movie list from response (or empty array if none)
-      cache.set(query, results); // Saves results to Map cache.
-      renderResults(results, query); //	Displays the movies on the webpage.
+      const results = data.results || [];
+      cache.set(query, results);
+      renderResults(results, query);
     })
-
-    // Runs if promise fails. If any failures, show error message.
     .catch(err => {
       if (err.name === 'AbortError') {
         console.log('Request cancelled:', query);
@@ -241,14 +245,12 @@ function fetchResults(query) {
       }
       statusEl.textContent = 'Error: ' + err.message;
     })
-
-    // Runs no matter what. Hides spinner when not in use.
     .finally(() => {
       setLoading(false);
     });
 }
 
-// INPUT HANDLING (with debounce)
+// INPUT HANDLING
 function handleInput(e) {
   const query = e.target.value.trim();
 
@@ -263,13 +265,12 @@ function handleInput(e) {
     clearTimeout(timerId);
   }
 
-  // Debounce: waits 300ms after user stops typing
   timerId = setTimeout(() => {
     fetchResults(query);
   }, 300);
 }
 
-// KEYBOARD INPUT (ArrowUp, ArrowDown, Enter)
+// KEYBOARD INPUT
 function handleKeydown(e) {
   const items = resultsList.querySelectorAll('li');
   if (!items.length) return;
