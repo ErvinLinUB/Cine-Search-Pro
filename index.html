@@ -11,24 +11,54 @@
 
   <div id="app" data-loading="false">
 
-    <h1>CineSearch Pro</h1>
+    <div class="app-header">
+      <h1>CineSearch Pro</h1>
+      <div class="tagline">Discover your next favorite movie</div>
+    </div>
 
     <div class="main-layout">
 
       <div class="search-column">
-        <input type="text" id="search-input" placeholder="Search movies..." />
-        <p id="status"></p>
-        <div class="spinner" id="spinner"></div>
-        <ul id="results-list"></ul>
+        <div class="search-controls">
+          <input type="text" id="search-input" placeholder="Search movies..." />
+          <p id="status"></p>
+          <div class="spinner" id="spinner"></div>
+        </div>
+        <div class="results-wrapper">
+          <ul id="results-list"></ul>
+        </div>
       </div>
 
       <div class="detail-column">
         <div id="detail-panel">
-          <h2 id="detail-title"></h2>
-          <p id="detail-overview"></p>
-          <p><strong>Genres:</strong> <span id="detail-genres"></span></p>
-          <p><strong>Cast:</strong> <span id="detail-cast"></span></p>
-          <p><strong>Trailer:</strong> <span id="detail-videos"></span></p>
+          <div class="hero-section">
+            <div class="hero-backdrop" id="hero-backdrop"></div>
+            <div class="hero-content">
+              <img id="detail-poster" src="" alt="Movie poster" />
+              <div class="hero-details">
+                <h2 id="detail-title"></h2>
+                <div class="movie-meta" id="movie-meta"></div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-info">
+            <div class="info-section">
+              <h3>Overview</h3>
+              <p id="detail-overview"></p>
+            </div>
+            <div class="info-section">
+              <h3>Genres</h3>
+              <p><span id="detail-genres"></span></p>
+            </div>
+            <div class="info-section">
+              <h3>Top Cast</h3>
+              <p><span id="detail-cast"></span></p>
+            </div>
+            <div class="info-section">
+              <h3>Trailer</h3>
+              <div id="detail-videos"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -38,6 +68,7 @@
 
   <template id="movie-template">
     <li>
+      <img class="thumb" src="" alt="" />
       <span class="title"></span>
     </li>
   </template>

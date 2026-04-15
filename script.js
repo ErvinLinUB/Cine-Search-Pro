@@ -17,6 +17,9 @@ if (!movieTemplate) throw new Error('Element #movie-template not found in the DO
 const detailPanel = document.getElementById('detail-panel');
 if (!detailPanel) throw new Error('Element #detail-panel not found in the DOM');
 
+const detailPoster = document.getElementById('detail-poster');
+if (!detailPoster) throw new Error('Element #detail-poster not found in the DOM');
+
 const detailTitle = document.getElementById('detail-title');
 if (!detailTitle) throw new Error('Element #detail-title not found in the DOM');
 
@@ -33,8 +36,12 @@ const detailVideos = document.getElementById('detail-videos');
 if (!detailVideos) throw new Error('Element #detail-videos not found in the DOM');
 
 // Configuration
-const API_KEY  = '2ee7d6898391a99306f00fe36468ece7';
-const API_BASE = 'https://api.themoviedb.org/3';
+const API_KEY    = '2ee7d6898391a99306f00fe36468ece7';
+const API_BASE   = 'https://api.themoviedb.org/3';
+
+// TMDB image base URLs
+const IMG_BASE_W92  = 'https://image.tmdb.org/t/p/w92';   // thumbnail in results list
+const IMG_BASE_W500 = 'https://image.tmdb.org/t/p/w500';  // poster in detail panel
 
 // Application State
 const cache      = new Map();
@@ -42,7 +49,7 @@ let timerId      = null;
 let currentAbort = null;
 let activeIndex  = -1;
 
-// Ui State
+// UI State
 function setLoading(isLoading) {
   app.setAttribute('data-loading', isLoading);
 }
@@ -88,7 +95,16 @@ function renderResults(movies, query) {
   movies.forEach((movie, index) => {
     const clone = movieTemplate.content.cloneNode(true);
     const li    = clone.querySelector('li');
+    const thumb = clone.querySelector('.thumb');
     const span  = clone.querySelector('.title');
+
+    // Thumbnail — use poster_path if available, otherwise hide the img
+    if (movie.poster_path) {
+      thumb.src = IMG_BASE_W92 + movie.poster_path;
+      thumb.alt = movie.title;
+    } else {
+      thumb.style.display = 'none';
+    }
 
     span.appendChild(buildHighlightedTitle(movie.title, query));
 
@@ -112,11 +128,12 @@ function updateActiveItem() {
 // Movie Details
 function selectMovie(movieId) {
   detailPanel.style.display = 'block';
-  detailTitle.textContent   = 'Loading...';
+  detailTitle.textContent    = 'Loading...';
   detailOverview.textContent = '';
   detailGenres.textContent   = '';
   detailCast.textContent     = '';
   detailVideos.innerHTML     = '';
+  detailPoster.src           = '';
 
   const detailsUrl = `${API_BASE}/movie/${movieId}?api_key=${API_KEY}`;
   const creditsUrl = `${API_BASE}/movie/${movieId}/credits?api_key=${API_KEY}`;
@@ -130,11 +147,21 @@ function selectMovie(movieId) {
 
     if (detailsResult.status === 'fulfilled') {
       const d = detailsResult.value;
+
       detailTitle.textContent    = d.title || 'N/A';
       detailOverview.textContent = d.overview || 'No overview available.';
       detailGenres.textContent   = d.genres
         ? d.genres.map(g => g.name).join(', ')
         : 'N/A';
+
+      // Poster in detail panel
+      if (d.poster_path) {
+        detailPoster.src    = IMG_BASE_W500 + d.poster_path;
+        detailPoster.alt    = d.title;
+        detailPoster.style.display = 'block';
+      } else {
+        detailPoster.style.display = 'none';
+      }
     } else {
       detailTitle.textContent = 'Failed to load details.';
     }
@@ -149,15 +176,17 @@ function selectMovie(movieId) {
     }
 
     if (videosResult.status === 'fulfilled') {
-      const videos = videosResult.value.results || [];
+      const videos  = videosResult.value.results || [];
       const trailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube');
 
       if (trailer) {
-        const a = document.createElement('a');
-        a.href        = `https://www.youtube.com/watch?v=${trailer.key}`;
-        a.target      = '_blank';
-        a.textContent = 'Watch Trailer';
-        detailVideos.appendChild(a);
+        // Embedded YouTube iframe so the user can watch directly in the app
+        const iframe = document.createElement('iframe');
+        iframe.src             = `https://www.youtube.com/embed/${trailer.key}`;
+        iframe.title           = 'Movie Trailer';
+        iframe.allow           = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
+        detailVideos.appendChild(iframe);
       } else {
         detailVideos.textContent = 'No trailer available.';
       }
@@ -215,8 +244,8 @@ function handleInput(e) {
   const query = e.target.value.trim();
 
   if (!query) {
-    resultsList.innerHTML  = '';
-    statusEl.textContent   = '';
+    resultsList.innerHTML     = '';
+    statusEl.textContent      = '';
     detailPanel.style.display = 'none';
     return;
   }
@@ -239,12 +268,12 @@ function handleKeydown(e) {
     e.preventDefault();
     activeIndex = Math.min(activeIndex + 1, items.length - 1);
     updateActiveItem();
-  } 
+  }
   else if (e.key === 'ArrowUp') {
     e.preventDefault();
     activeIndex = Math.max(activeIndex - 1, 0);
     updateActiveItem();
-  } 
+  }
   else if (e.key === 'Enter' && activeIndex >= 0) {
     const activeItem = items[activeIndex];
     const index      = parseInt(activeItem.getAttribute('data-index'));
